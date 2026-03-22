@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UAV Dashboard</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #111;
+            color: #eee;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 250px);
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .card {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .low {
+            color: red;
+        }
+
+        .ok {
+            color: lime;
+        }
+    </style>
+</head>
+<body>
+
+<h1>UAV Live Dashboard</h1>
+<div class="grid" id="grid"></div>
+
+<script>
+const grid = document.getElementById("grid");
+
+const ws = new WebSocket("ws://localhost:8000/ws");
+
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    render(data);
+};
+
+function render(uavs) {
+    grid.innerHTML = "";
+
+    Object.values(uavs).forEach(uav => {
+        const battery = uav.battery_pct.toFixed(1);
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+            <h3>${uav.name}</h3>
+            <p>Model: ${uav.model}</p>
+            <p>Flight State: ${uav.flight_state}</p>
+            <p>Battery: 
+                <span class="${battery < 20 ? 'low' : 'ok'}">
+                    ${battery}%
+                </span>
+            </p>
+            <p>Energy: ${uav.battery_j.toFixed(0)} J</p>
+            <p>Edge: ${uav.edge_device || "None"}</p>
+        `;
+
+        grid.appendChild(card);
+    });
+}
+</script>
+
+</body>
+</html>
