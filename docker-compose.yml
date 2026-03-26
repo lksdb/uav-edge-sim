@@ -13,14 +13,20 @@ services:
     build: ./uav
     environment:
       - CONTROLLER_URL=http://controller:8000
+      - IMG_RANGE=[1,100]
     volumes:
       - ./uav:/app
       - ./configs/uav1.json:/config/uav_config.json
+      - ${IMG_PATH}:/cam_feed
+      - ./Model/fire_model.onnx:/app/best_model.onnx:ro
 
   uav2:
     build: ./uav
     environment:
       - CONTROLLER_URL=http://controller:8000
+      - IMG_RANGE=[100,200]
     volumes:
       - ./uav:/app
       - ./configs/uav2.json:/config/uav_config.json
+      - ${IMG_PATH}:/cam_feed
+      - ./Model/fire_model.onnx:/app/best_model.onnx:ro

@@ -1,6 +1,6 @@
 import random
 from typing import List
-
+import threading
 
 # ----------------------------
 # Define Task and UAV Classes
@@ -14,6 +14,7 @@ class Task:
 class UAV:
     def __init__(self, name, model_specs, edge_device=None, curr_battery=100):
         self.name = name
+        self._lock = threading.Lock()
 
         self.flight_state = "hover" 
 
@@ -52,9 +53,10 @@ class UAV:
     # ========================
 
     def _consume_energy(self, energy):
-        self.battery_energy -= energy
-        if self.battery_energy < 0:
-            self.battery_energy = 0
+        with self._lock:
+            self.battery_energy -= energy
+            if self.battery_energy < 0:
+                self.battery_energy = 0
 
     def hover(self, dt):
         energy = self.hover_power * dt
@@ -64,13 +66,14 @@ class UAV:
         energy = self.cruise_power * dt
         self._consume_energy(energy)
 
-    def run_inference(self):
+    def run_inference(self,dt):
         if self.edge_device:
-            self._consume_energy(self.edge_device.power["load_w"])
+            self._consume_energy(self.edge_device["power"]["load_w"]*dt)
         else:
-            self._consume_energy(self.inference_energy)
+            self._consume_energy(self.inference_energy*dt)
 
-    def transmit_image(self):
+    #need work
+    def transmit_image(self,dt):
         energy = self.tx_energy_per_mb * self.image_size
         self._consume_energy(energy)
 

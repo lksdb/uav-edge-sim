@@ -34,6 +34,11 @@
         .ok {
             color: lime;
         }
+        .card img {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -51,15 +56,21 @@ ws.onmessage = (event) => {
     render(data);
 };
 
-function render(uavs) {
-    grid.innerHTML = "";
+const cards = {};
 
+function render(uavs) {
     Object.values(uavs).forEach(uav => {
         const battery = uav.battery_pct.toFixed(1);
 
-        const card = document.createElement("div");
-        card.className = "card";
+        let card = cards[uav.name];
 
+        if (!card) {
+            card = document.createElement("div");
+            card.className = "card";
+            grid.appendChild(card);
+            cards[uav.name] = card;
+        }
+        console.log(uav.current_image)
         card.innerHTML = `
             <h3>${uav.name}</h3>
             <p>Model: ${uav.model}</p>
@@ -71,9 +82,31 @@ function render(uavs) {
             </p>
             <p>Energy: ${uav.battery_j.toFixed(0)} J</p>
             <p>Edge: ${uav.edge_device || "None"}</p>
-        `;
 
-        grid.appendChild(card);
+            Inference Result: <span style="
+                color: ${
+                    uav.inference_result === true
+                    ? 'red'
+                    : uav.inference_result === false
+                    ? 'green'
+                    : 'inherit'
+                }
+                ">
+                 ${
+                    uav.inference_result === true
+                    ? "FIRE"
+                    : uav.inference_result === false
+                    ? "SAFE"
+                    : "None"
+                }
+            </span>
+
+            ${
+                uav.current_image
+                ? `<img src="${uav.current_image}?t=${Date.now()}" />`
+                : `<p style="opacity:0.5;">No image</p>`
+            }
+        `;
     });
 }
 </script>

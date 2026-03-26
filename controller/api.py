@@ -26,6 +26,31 @@ async def receive_status(data: dict):
     uav_states[uav_id] = data
     return {"ok": True}
 
+#not in use now, maybe later
+@app.post("/cam_feed")
+async def receive_cam(data: dict):
+    uav_id = data["name"]
+    uav_states[uav_id]["current_image"] = data["img"]
+    return {"ok": True}
+
+@app.post("/register")
+async def register_uav(data: dict):
+    uav_id = data["name"]
+    if uav_id not in uav_states:
+        uav_states[uav_id] = {
+            "status": {},
+            "current_image": None
+        }
+
+    return {"status": "registered"}
+
+@app.post("/inference_result")
+async def receive_inference_result(data: dict):
+    uav_id = data["name"]
+    if uav_id in uav_states:
+        uav_states[uav_id]["inference_result"] = data["is_fire"]
+    return {"ok": True}
+
 # WebSocket → Frontend
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
