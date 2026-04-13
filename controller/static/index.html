@@ -44,6 +44,7 @@
 <body>
 
 <h1>UAV Live Dashboard</h1>
+<button id="pauseBtn" onclick="togglePause()" style="display:block; margin: 0 auto 20px auto; padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; background: red; color: white;">Pause All</button>
 <div class="grid" id="grid"></div>
 
 <script>
@@ -51,9 +52,18 @@ const grid = document.getElementById("grid");
 
 const ws = new WebSocket("ws://localhost:8000/ws");
 
+async function togglePause() {
+    await fetch("/toggle_pause", { method: "POST" });
+}
+
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    render(data);
+    const btn = document.getElementById("pauseBtn");
+    if (btn) {
+        btn.innerText = data.is_paused ? "Resume All" : "Pause All";
+        btn.style.background = data.is_paused ? "green" : "red";
+    }
+    render(data.uavs);
 };
 
 const cards = {};
@@ -103,7 +113,7 @@ function render(uavs) {
 
             ${
                 uav.current_image
-                ? `<img src="${uav.current_image}?t=${Date.now()}" />`
+                ? `<img src="${uav.current_image}" style="border: 3px solid ${uav.inference_result ? 'red' : 'green'};" />`
                 : `<p style="opacity:0.5;">No image</p>`
             }
         `;

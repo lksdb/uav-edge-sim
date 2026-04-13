@@ -14,7 +14,8 @@ IMAGE_SIZE = (224, 224)
 BATCH_SIZE = 32
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-TEST_DIR = os.environ["TESTSET"]   #test dataset
+TEST_DIR = os.environ.get("TESTSET")  #test dataset
+print(f"Test Directory: {TEST_DIR}")
 MODEL_PATH = "best_mobilenet_model1.pth"
 
 # =========================

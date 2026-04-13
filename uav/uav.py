@@ -71,10 +71,16 @@ class UAV:
             self._consume_energy(self.edge_device["power"]["load_w"]*dt)
         else:
             self._consume_energy(self.inference_energy*dt)
+    
+    def run_training(self, dt):
+        # Training draws max compute power
+        self._consume_energy(self.compute_power * dt * 2.0)
 
     #need work
-    def transmit_image(self,dt):
-        energy = self.tx_energy_per_mb * self.image_size
+    def transmit_image(self,dt=0, size_mb=None):
+        if size_mb is None:
+            size_mb = self.image_size
+        energy = self.tx_energy_per_mb * size_mb
         self._consume_energy(energy)
 
     # ========================

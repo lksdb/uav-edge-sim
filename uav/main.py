@@ -4,10 +4,14 @@ import time
 import requests
 import threading
 import queue
+import base64
+from PIL import Image
+import io
 
 from uav import UAV
 from onnx_inference import predict
 from utility import load_specs, load_config
+from fl_client import start_fl_client
 
 CONFIG_PATH = "/config/uav_config.json"
 CONTROLLER_URL = os.getenv("CONTROLLER_URL")
@@ -15,6 +19,14 @@ IMG_RANGE = ast.literal_eval(os.getenv("IMG_RANGE"))
 
 lock = threading.Lock()
 infer_queue = queue.Queue()
+
+def compress_image_b64(image_path):
+    with Image.open(image_path) as img:
+        img = img.convert("RGB")
+        img.thumbnail((256, 256))
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=50)
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 def inference_worker():
     while True:
@@ -27,9 +39,16 @@ def inference_worker():
         task[1].run_inference(end-start) 
 
         try:
-            requests.post(f"{CONTROLLER_URL}/inference_result", json={"name":task[1].name, "is_fire":result["is_fire"]})
+            img_b64 = compress_image_b64(task[0])
+            requests.post(f"{CONTROLLER_URL}/inference_result", json={
+                "name": task[1].name, 
+                "is_fire": result["is_fire"], 
+                "img": img_b64
+            })
+            print(f"[{task[1].name}] Inference done. Fire: {result['is_fire']}. img: {task[0]}")
         except:
             pass
+            print(f"[{task[1].name}] Inference done but failed to send result. Fire: {result['is_fire']}. img: {task[0]}")
         infer_queue.task_done()
 
 def register(uav):
@@ -65,20 +84,25 @@ def main():
     )
     register(uav)
     threading.Thread(target=inference_worker, daemon=True).start()
+    threading.Thread(target=lambda: start_fl_client(uav), daemon=True).start()
 
     i=IMG_RANGE[0]
     while True:
-        uav.step(1, "hover")
-            
-        if infer_queue.empty() and i < IMG_RANGE[1]:   # one task at most
-            infer_queue.put((f"/cam_feed/{i}.jpg", uav))
-            i += 1
-
+        is_paused = False
         # send telemetry
         try:
-            requests.post(f"{CONTROLLER_URL}/status", json=uav.get_telemetry())
+            res = requests.post(f"{CONTROLLER_URL}/status", json=uav.get_telemetry())
+            if res.status_code == 200:
+                is_paused = res.json().get("is_paused", False)
         except:
             pass
+
+        if not is_paused:
+            uav.step(1, "hover")
+                
+            if infer_queue.empty() and i < IMG_RANGE[1]:   # one task at most
+                infer_queue.put((f"/cam_feed/{i}.jpg", uav))
+                i += 1
 
         time.sleep(1)
 
